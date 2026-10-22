@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { EquipmentCard } from "@/components/gear/EquipmentCard";
@@ -156,70 +157,111 @@ export default function Home() {
           </section>
         )}
 
-        {/* Hero Section */}
-        <section className="bg-slate-900 text-white rounded-2xl p-6 sm:p-10 lg:p-12 border border-slate-800 w-full">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 text-[11px] sm:text-xs font-mono mb-4 sm:mb-6">
-              <span>San Francisco Downtown Hub · Serial-Tracked Inventory</span>
-            </div>
+        {/* Hero Section (Black Div with Transparent Camera Rig) */}
+        <section className="bg-slate-900 text-white rounded-2xl p-6 sm:p-10 lg:p-12 border border-slate-800 w-full relative overflow-hidden">
+          {/* Subtle background depth grid (pure dark utilitarian) */}
+          <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:24px_24px] opacity-35 pointer-events-none" />
 
-            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight mb-4 sm:mb-5">
-              Find the right gear, book your dates, and get ready to shoot.
-            </h1>
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+            {/* Left Content Column */}
+            <div className="lg:col-span-7 flex flex-col justify-between">
+              <div>
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 text-[11px] sm:text-xs font-mono mb-4 sm:mb-6 border border-slate-700/60">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>San Francisco Downtown Hub · Serial-Tracked Inventory</span>
+                </div>
 
-            <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6 sm:mb-8 max-w-2xl">
-              Professional camera equipment rental with database-enforced availability. Every camera and lens is tracked by physical serial number and inspected between bookings.
-            </p>
+                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight mb-4 sm:mb-5">
+                  Find the right gear, book your dates, and get ready to shoot.
+                </h1>
 
-            {/* Date Search Bar */}
-            <div className="p-3 rounded-xl bg-slate-800 border border-slate-700 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              <div className="flex-1 flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-xs">
-                <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
-                <div className="min-w-0">
-                  <span className="block text-[10px] uppercase font-mono text-slate-400 truncate">
-                    Rental Dates
-                  </span>
-                  <span className="font-semibold text-white truncate block">
-                    {startDate} – {endDate} ({rentalDays} Days)
-                  </span>
+                <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6 sm:mb-8 max-w-2xl">
+                  Professional camera equipment rental with database-enforced availability. Every camera, lens, and drone is tracked by physical serial number and inspected between bookings.
+                </p>
+
+                {/* Date Search Bar */}
+                <div className="p-3 rounded-xl bg-slate-800 border border-slate-700 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <div className="flex-1 flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-xs">
+                    <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
+                    <div className="min-w-0">
+                      <span className="block text-[10px] uppercase font-mono text-slate-400 truncate">
+                        Rental Dates
+                      </span>
+                      <span className="font-semibold text-white truncate block">
+                        {startDate} – {endDate} ({rentalDays} Days)
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                    <a
+                      href="#shoot-builder"
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer text-center shrink-0"
+                    >
+                      <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
+                      <span>Use Shoot Builder</span>
+                    </a>
+
+                    <a
+                      href="#gear"
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-semibold text-xs flex items-center justify-center transition-colors cursor-pointer text-center shrink-0"
+                    >
+                      <span>Browse Gear</span>
+                    </a>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-                <a
-                  href="#shoot-builder"
-                  className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer text-center"
-                >
-                  <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
-                  <span>Use Shoot Builder</span>
-                </a>
-
-                <a
-                  href="#gear"
-                  className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-semibold text-xs flex items-center justify-center transition-colors cursor-pointer text-center"
-                >
-                  <span>Browse Gear</span>
-                </a>
+              {/* Key Operational Rules Ticker */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 pt-6 sm:pt-8 mt-6 sm:mt-8 border-t border-slate-800 text-xs">
+                <div>
+                  <span className="block text-lg sm:text-xl font-bold text-white font-mono">Serial Level</span>
+                  <span className="text-slate-400 text-[11px] sm:text-xs">Tracked by serial number</span>
+                </div>
+                <div>
+                  <span className="block text-lg sm:text-xl font-bold text-white font-mono">DB Locked</span>
+                  <span className="text-slate-400 text-[11px] sm:text-xs">No double-booking</span>
+                </div>
+                <div>
+                  <span className="block text-lg sm:text-xl font-bold text-white font-mono">15 Mins</span>
+                  <span className="text-slate-400 text-[11px] sm:text-xs">Checkout hold duration</span>
+                </div>
+                <div>
+                  <span className="block text-lg sm:text-xl font-bold text-white font-mono">2 Hours</span>
+                  <span className="text-slate-400 text-[11px] sm:text-xs">Turnaround inspection</span>
+                </div>
               </div>
             </div>
 
-            {/* Key Operational Rules Ticker */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 pt-6 sm:pt-8 mt-6 sm:mt-8 border-t border-slate-800 text-xs">
-              <div>
-                <span className="block text-lg sm:text-xl font-bold text-white font-mono">Serial Level</span>
-                <span className="text-slate-400 text-[11px] sm:text-xs">Tracked by serial number</span>
-              </div>
-              <div>
-                <span className="block text-lg sm:text-xl font-bold text-white font-mono">DB Locked</span>
-                <span className="text-slate-400 text-[11px] sm:text-xs">No double-booking</span>
-              </div>
-              <div>
-                <span className="block text-lg sm:text-xl font-bold text-white font-mono">15 Mins</span>
-                <span className="text-slate-400 text-[11px] sm:text-xs">Checkout hold duration</span>
-              </div>
-              <div>
-                <span className="block text-lg sm:text-xl font-bold text-white font-mono">2 Hours</span>
-                <span className="text-slate-400 text-[11px] sm:text-xs">Turnaround inspection</span>
+            {/* Right Column: Transparent Cinema Camera Rig in Dark Div */}
+            <div className="lg:col-span-5 flex flex-col items-center justify-center relative pt-4 lg:pt-0">
+              <div className="relative w-full max-w-sm sm:max-w-md mx-auto group">
+                {/* Floating Cinema Camera Cutout */}
+                <div className="relative aspect-square flex items-center justify-center p-2">
+                  <Image
+                    src="/images/hero-camera.png"
+                    alt="Sony FX Cinema Line Camera Rig with XLR Audio and Matte Box"
+                    width={560}
+                    height={560}
+                    priority
+                    className="object-contain drop-shadow-[0_25px_35px_rgba(0,0,0,0.9)] filter transition-transform duration-500 group-hover:scale-105 select-none"
+                  />
+                </div>
+
+                {/* Hardware Verification Badge Overlay */}
+                <div className="absolute -bottom-2 sm:bottom-0 left-1/2 -translate-x-1/2 w-11/12 max-w-xs bg-slate-800/95 backdrop-blur-md border border-slate-700/80 rounded-xl p-3 shadow-2xl">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                      <span className="font-semibold text-slate-200">Sony Cinema Rig</span>
+                    </div>
+                    <span className="font-mono text-slate-400 text-[10px]">SN-SNY-FX6-2501</span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                    <span>4K 120p · Raw SDI · Matte Box</span>
+                    <span className="text-emerald-400 font-semibold">Ready for Pickup</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

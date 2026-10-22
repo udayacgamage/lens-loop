@@ -1,0 +1,511 @@
+// LensLoop Prisma Schema
+// Automates availability, booking, payment, reminders, pickup records, returns, and maintenance scheduling.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  CUSTOMER
+  STAFF
+  ADMIN
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum UnitConditionStatus {
+  EXCELLENT
+  GOOD
+  FAIR
+  DAMAGED
+  IN_MAINTENANCE
+}
+
+enum UnitLifecycleStatus {
+  AVAILABLE
+  CHECKED_OUT
+  AWAITING_INSPECTION
+  MAINTENANCE
+  RETIRED
+}
+
+enum CompatibilityRelation {
+  ACCEPTS_LENS
+  ACCEPTS_BATTERY
+  ACCEPTS_MEDIA
+  ACCEPTS_MOUNT_ADAPTER
+  ACCESSORY
+}
+
+enum BookingStatus {
+  DRAFT
+  TEMPORARY_HOLD
+  CONFIRMED
+  PREPARING
+  READY_FOR_PICKUP
+  ACTIVE
+  RETURNED
+  INSPECTION
+  COMPLETED
+  CANCELLED
+  EXPIRED
+  NO_SHOW
+}
+
+enum AllocationStatus {
+  HOLD
+  ALLOCATED
+  RELEASED
+  CHECKED_OUT
+  RETURNED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum DepositStatus {
+  HOLD_PENDING
+  AUTHORIZED
+  CAPTURED
+  RELEASED
+  FORFEITED
+  PARTIALLY_REFUNDED
+}
+
+enum HandoverType {
+  PICKUP
+  RETURN
+}
+
+enum InspectionStatus {
+  PENDING
+  COMPLETED
+  DISPUTED
+}
+
+enum MaintenanceStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  FAILED
+}
+
+model User {
+  id              String           @id @default(uuid())
+  clerkId         String?          @unique
+  email           String           @unique
+  name            String
+  phone           String?
+  role            UserRole         @default(CUSTOMER)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  customerProfile CustomerProfile?
+  bookings        Booking[]        @relation("CustomerBookings")
+  handovers       Handover[]       @relation("StaffHandovers")
+  inspections     Inspection[]     @relation("StaffInspections")
+  auditLogs       AuditLog[]       @relation("ActorAuditLogs")
+
+  @@map("users")
+}
+
+model CustomerProfile {
+  id                 String             @id @default(uuid())
+  userId             String             @unique
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  idVerification     VerificationStatus @default(UNVERIFIED)
+  idDocumentRef      String?
+  address            String?
+  city               String?
+  postalCode         String?
+  country            String?
+  emergencyContact   String?
+  notes              String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@map("customer_profiles")
+}
+
+model Location {
+  id               String          @id @default(uuid())
+  name             String
+  code             String          @unique
+  address          String
+  city             String
+  timezone         String          @default("UTC")
+  openingHours     String?
+  isActive         Boolean         @default(true)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  units            EquipmentUnit[]
+  pickupBookings   Booking[]       @relation("PickupLocation")
+  returnBookings   Booking[]       @relation("ReturnLocation")
+
+  @@map("locations")
+}
+
+model Category {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  slug        String           @unique
+  description String?
+  icon        String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  models      EquipmentModel[]
+
+  @@map("categories")
+}
+
+model EquipmentModel {
+  id                    String               @id @default(uuid())
+  categoryId            String
+  category              Category             @relation(fields: [categoryId], references: [id])
+  brand                 String
+  name                  String
+  slug                  String               @unique
+  description           String
+  specs                 Json?
+  dailyRateCents        Int
+  depositCents          Int                  @default(0)
+  replacementValueCents Int
+  turnaroundMinutes     Int                  @default(120) // Turnaround time between bookings (e.g., 2 hours inspection/prep)
+  isActive              Boolean              @default(true)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  units                 EquipmentUnit[]
+  images                EquipmentImage[]
+  bookingItems          BookingItem[]
+  kitItems              KitItem[]
+
+  sourceRules           CompatibilityRule[]  @relation("SourceModelRules")
+  targetRules           CompatibilityRule[]  @relation("TargetModelRules")
+
+  @@map("equipment_models")
+}
+
+model EquipmentUnit {
+  id              String              @id @default(uuid())
+  modelId         String
+  model           EquipmentModel      @relation(fields: [modelId], references: [id])
+  locationId      String
+  location        Location            @relation(fields: [locationId], references: [id])
+  serialNumber    String              @unique
+  qrCode          String              @unique
+  barcode         String?             @unique
+  conditionStatus UnitConditionStatus @default(EXCELLENT)
+  status          UnitLifecycleStatus @default(AVAILABLE)
+  purchaseDate    DateTime?
+  notes           String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  allocations     Allocation[]
+  inspections     Inspection[]
+  maintenanceJobs MaintenanceJob[]
+
+  @@map("equipment_units")
+}
+
+model EquipmentImage {
+  id           String         @id @default(uuid())
+  modelId      String
+  model        EquipmentModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  url          String
+  altText      String?
+  isPrimary    Boolean        @default(false)
+  displayOrder Int            @default(0)
+  createdAt    DateTime       @default(now())
+
+  @@map("equipment_images")
+}
+
+model CompatibilityRule {
+  id            String                @id @default(uuid())
+  sourceModelId String
+  targetModelId String
+  relationType  CompatibilityRelation
+  notes         String?
+  createdAt     DateTime              @default(now())
+
+  sourceModel   EquipmentModel        @relation("SourceModelRules", fields: [sourceModelId], references: [id], onDelete: Cascade)
+  targetModel   EquipmentModel        @relation("TargetModelRules", fields: [targetModelId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceModelId, targetModelId, relationType])
+  @@map("compatibility_rules")
+}
+
+model Kit {
+  id                    String    @id @default(uuid())
+  name                  String
+  slug                  String    @unique
+  shootType             String    // e.g., "Wedding", "Wildlife", "Product", "Podcast", "Short-film"
+  description           String
+  bundleDiscountPercent Int       @default(10)
+  dailyRateCents        Int
+  isActive              Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  items                 KitItem[]
+
+  @@map("kits")
+}
+
+model KitItem {
+  id         String         @id @default(uuid())
+  kitId      String
+  kit        Kit            @relation(fields: [kitId], references: [id], onDelete: Cascade)
+  modelId    String
+  model      EquipmentModel @relation(fields: [modelId], references: [id])
+  quantity   Int            @default(1)
+  isOptional Boolean        @default(false)
+
+  @@map("kit_items")
+}
+
+model Booking {
+  id                  String         @id @default(uuid())
+  bookingReference    String         @unique // e.g. "LL-1042"
+  customerId          String
+  customer            User           @relation("CustomerBookings", fields: [customerId], references: [id])
+  status              BookingStatus  @default(DRAFT)
+  startDate           DateTime
+  endDate             DateTime
+  pickupLocationId    String
+  pickupLocation      Location       @relation("PickupLocation", fields: [pickupLocationId], references: [id])
+  returnLocationId    String
+  returnLocation      Location       @relation("ReturnLocation", fields: [returnLocationId], references: [id])
+  subtotalCents       Int
+  depositCents        Int            @default(0)
+  totalCents          Int
+  currency            String         @default("USD")
+  agreementAcceptedAt DateTime?
+  agreementVersion    String?
+  notes               String?
+  pickupOpaqueToken   String?        @unique // Single-use expiring token for QR handover
+  tokenExpiresAt      DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  items               BookingItem[]
+  allocations         Allocation[]
+  payments            Payment[]
+  deposits            Deposit[]
+  handovers           Handover[]
+  agreements          Agreement[]
+  notifications       Notification[]
+
+  @@index([status])
+  @@index([startDate, endDate])
+  @@map("bookings")
+}
+
+model BookingItem {
+  id                     String         @id @default(uuid())
+  bookingId              String
+  booking                Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  modelId                String
+  model                  EquipmentModel @relation(fields: [modelId], references: [id])
+  dailyRateCentsSnapshot Int
+  quantity               Int            @default(1)
+  subtotalCents          Int
+
+  @@map("booking_items")
+}
+
+model Allocation {
+  id              String           @id @default(uuid())
+  bookingId       String
+  booking         Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  equipmentUnitId String
+  equipmentUnit   EquipmentUnit    @relation(fields: [equipmentUnitId], references: [id])
+  allocatedFrom   DateTime
+  allocatedTo     DateTime         // Includes turnaround/buffer time
+  holdExpiresAt   DateTime?        // Short checkout hold expiration (e.g. 15 mins)
+  status          AllocationStatus @default(HOLD)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([equipmentUnitId, allocatedFrom, allocatedTo])
+  @@index([status])
+  @@map("allocations")
+}
+
+model Payment {
+  id                String        @id @default(uuid())
+  bookingId         String
+  booking           Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  provider          String        @default("stripe")
+  providerPaymentId String?
+  amountCents       Int
+  currency          String        @default("USD")
+  status            PaymentStatus @default(PENDING)
+  idempotencyKey    String        @unique
+  failureReason     String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@map("payments")
+}
+
+model Deposit {
+  id               String        @id @default(uuid())
+  bookingId        String
+  booking          Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  amountCents      Int
+  status           DepositStatus @default(HOLD_PENDING)
+  providerAuthId   String?
+  expiresAt        DateTime?
+  capturedAmount   Int           @default(0)
+  refundedAmount   Int           @default(0)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@map("deposits")
+}
+
+model Agreement {
+  id          String   @id @default(uuid())
+  bookingId   String
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  version     String
+  termsText   String
+  signedAt    DateTime @default(now())
+  signerName  String
+  signerEmail String
+  ipAddress   String?
+
+  @@map("agreements")
+}
+
+model Handover {
+  id               String       @id @default(uuid())
+  bookingId        String
+  booking          Booking      @relation(fields: [bookingId], references: [id])
+  type             HandoverType
+  staffId          String
+  staff            User         @relation("StaffHandovers", fields: [staffId], references: [id])
+  scannedAt        DateTime     @default(now())
+  notes            String?
+  tokenUsed        String?
+  createdAt        DateTime     @default(now())
+
+  inspections      Inspection[]
+
+  @@map("handovers")
+}
+
+model Inspection {
+  id                String           @id @default(uuid())
+  handoverId        String?
+  handover          Handover?        @relation(fields: [handoverId], references: [id])
+  unitId            String
+  unit              EquipmentUnit    @relation(fields: [unitId], references: [id])
+  inspectorStaffId  String
+  inspector         User             @relation("StaffInspections", fields: [inspectorStaffId], references: [id])
+  passed            Boolean          @default(true)
+  findings          String?
+  photos            Json?            // Array of S3 photo URLs
+  chargeAmountCents Int              @default(0)
+  status            InspectionStatus @default(PENDING)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@map("inspections")
+}
+
+model MaintenanceJob {
+  id              String            @id @default(uuid())
+  unitId          String
+  unit            EquipmentUnit     @relation(fields: [unitId], references: [id])
+  reason          String
+  startedAt       DateTime          @default(now())
+  completedAt     DateTime?
+  status          MaintenanceStatus @default(SCHEDULED)
+  costCents       Int               @default(0)
+  servicedBy      String?
+  notes           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@map("maintenance_jobs")
+}
+
+model Notification {
+  id             String              @id @default(uuid())
+  bookingId      String?
+  booking        Booking?            @relation(fields: [bookingId], references: [id])
+  recipientEmail String?
+  recipientPhone String?
+  channel        NotificationChannel
+  template       String
+  status         NotificationStatus  @default(QUEUED)
+  providerRef    String?
+  idempotencyKey String              @unique
+  sentAt         DateTime?
+  createdAt      DateTime            @default(now())
+
+  @@map("notifications")
+}
+
+model WebhookEvent {
+  id             String    @id @default(uuid())
+  eventId        String    @unique
+  provider       String
+  eventType      String
+  payload        Json
+  processedAt    DateTime?
+  status         String    @default("PENDING") // PENDING, PROCESSED, FAILED
+  error          String?
+  createdAt      DateTime  @default(now())
+
+  @@map("webhook_events")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  actor      User?    @relation("ActorAuditLogs", fields: [actorId], references: [id])
+  actorType  String   // CUSTOMER, STAFF, ADMIN, SYSTEM
+  action     String   // e.g. "UNIT_ALLOCATED", "PAYMENT_SUCCEEDED", "OVERDUE_FLAGGED"
+  entityType String   // e.g. "Booking", "EquipmentUnit", "Payment"
+  entityId   String
+  details    Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
